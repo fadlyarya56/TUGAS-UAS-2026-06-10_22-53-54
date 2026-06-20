@@ -9,6 +9,17 @@ public class SlimeAttack : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             Debug.Log("Player terkena serangan");
+
+            PlayerHealth player =
+                other.GetComponent<PlayerHealth>();
+
+            if (player != null)
+            {
+                Vector2 hitDirection =
+                    (other.transform.position - transform.position).normalized;
+
+                player.TakeDamage(damage, hitDirection);
+            }
         }
     }
 }

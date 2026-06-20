@@ -9,6 +9,10 @@ public class PlayerMovement : MonoBehaviour
     public ParticleSystem walkDust;
     public GameObject slashEffect;
     public Animator slashAnimator;
+    public bool isDead = false;
+
+    [HideInInspector]
+    public bool isKnockedBack = false;
 
     [Header("Attack")]
     public GameObject swordHitbox;
@@ -51,6 +55,11 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
+        if (isDead)
+        {
+            rb.linearVelocity = Vector2.zero;
+            return;
+        }
         // ===== COOLDOWN TIMER =====
         if (onCooldown)
         {
@@ -109,10 +118,13 @@ public class PlayerMovement : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (isKnockedBack)
+        return;
+
         if (!isAttacking)
-            rb.linearVelocity = moveInput * speed;
+        rb.linearVelocity = moveInput * speed;
         else
-            rb.linearVelocity = Vector2.zero;
+        rb.linearVelocity = Vector2.zero;
     }
 
     void StartAttack(int step)
