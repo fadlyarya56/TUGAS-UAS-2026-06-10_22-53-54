@@ -52,6 +52,9 @@ TagManager:
   - name: Dekorasi
     uniqueID: 744471889
     locked: 0
+  - name: EnemyUI
+    uniqueID: 1751989693
+    locked: 0
   m_RenderingLayers:
   - Default
   m_MigratedRenderPipelines: []

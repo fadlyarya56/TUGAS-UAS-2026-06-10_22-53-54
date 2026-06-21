@@ -5,10 +5,12 @@ public class SwordHitbox : MonoBehaviour
 {
     public int damage = 1;
 
-    // Simpan musuh yang sudah kena di serangan ini
+    [Header("Critical Hit")]
+    public float critChance = 0.15f; // 15%
+    public int critMultiplier = 3;
+
     private List<Collider2D> alreadyHit = new List<Collider2D>();
 
-    // Reset list saat hitbox diaktifkan (tiap serangan baru)
     private void OnEnable()
     {
         alreadyHit.Clear();
@@ -27,7 +29,10 @@ public class SwordHitbox : MonoBehaviour
             Vector2 hitDirection =
                 (other.transform.position - transform.position).normalized;
 
-            enemy.TakeDamage(damage, hitDirection);
+            bool isCrit = Random.value < critChance;
+            int finalDamage = isCrit ? damage * critMultiplier : damage;
+
+            enemy.TakeDamage(finalDamage, hitDirection, isCrit);
         }
     }
 }

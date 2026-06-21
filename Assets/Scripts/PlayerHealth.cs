@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 public class PlayerHealth : MonoBehaviour
 {
     [Header("Health")]
-    public int maxHealth = 10;
+    public int maxHealth = 100;
     private int currentHealth;
 
     [Header("References")]
@@ -23,9 +23,16 @@ public class PlayerHealth : MonoBehaviour
     [Header("I Frame")]
     public float iFrameDuration = 0.5f;
 
+    [Header("Regen")]
+    public float regenDelay = 5f;     // detik tanpa kena damage sebelum regen mulai
+    public float regenInterval = 0.5f; // tiap berapa detik nambah HP
+    public int regenAmount = 1;       // HP per tick
+
     public bool isDead = false;
 
     private bool isInvincible = false;
+    private float lastHitTime;
+    private float regenTimer;
 
     private Rigidbody2D rb;
     private SpriteRenderer[] srs;
@@ -48,8 +55,26 @@ public class PlayerHealth : MonoBehaviour
         playerMovement = GetComponent<PlayerMovement>();
 
         currentHealth = maxHealth;
+        lastHitTime = -regenDelay;
 
         UpdateHealthBar();
+    }
+
+    void Update()
+    {
+        if (isDead) return;
+
+        // ===== HP REGEN =====
+        if (currentHealth < maxHealth && Time.time - lastHitTime >= regenDelay)
+        {
+            regenTimer += Time.deltaTime;
+            if (regenTimer >= regenInterval)
+            {
+                regenTimer = 0f;
+                currentHealth = Mathf.Min(currentHealth + regenAmount, maxHealth);
+                UpdateHealthBar();
+            }
+        }
     }
 
 
@@ -58,9 +83,12 @@ public class PlayerHealth : MonoBehaviour
         if (isDead || isInvincible)
             return;
 
+        lastHitTime = Time.time; // reset regen timer
+        regenTimer = 0f;
 
         currentHealth -= damage;
 
+        animator.SetTrigger("Hit");
 
         StartCoroutine(IFrame());
 
@@ -193,7 +221,7 @@ public class PlayerHealth : MonoBehaviour
 
 
         SlimeAI[] slimes =
-        FindObjectsByType<SlimeAI>();
+        FindObjectsByType<SlimeAI>(FindObjectsSortMode.None);
 
 
         foreach(SlimeAI slime in slimes)

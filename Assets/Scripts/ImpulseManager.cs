@@ -12,8 +12,8 @@ public class CameraImpulseManager : MonoBehaviour
         Instance = this;
     }
 
-    public void Shake()
+    public void Shake(float multiplier = 1f)
     {
-        impulse.GenerateImpulse();
+        impulse.GenerateImpulse(multiplier);
     }
 }

@@ -5,6 +5,8 @@ public class EnemyHealth : MonoBehaviour
 {
     [Header("Health")]
     public int maxHealth = 3;
+    private int currentHealth;
+    private bool isDead = false;
 
     [Header("Knockback")]
     public float knockbackForce = 5f;
@@ -12,18 +14,23 @@ public class EnemyHealth : MonoBehaviour
     public float hitStopDuration = 0.08f;
 
     [Header("Camera Shake")]
-    public float shakeDuration = 0.1f;
-    public float shakeMagnitude = 0.08f;
+    public float shakeMultiplier = 1f;
+    public float critShakeMultiplier = 2f;
 
-    private int currentHealth;
-    private bool isDead = false;
+    [Header("UI")]
+    public EnemyHealthBar healthBar; // assign child object di Inspector
+
+    [Header("Loot")]
+    public GameObject lootPrefab;     // misal Slime Jelly
+    public float lootDropChance = 0.35f; // ~3-4 dari 10
+
+    [Header("Quest")]
+    public bool countsForQuest = true; // slime = true
 
     private SpriteRenderer sr;
     private Rigidbody2D rb;
     private Animator animator;
     private SlimeAI slimeAI;
-
-    // Untuk cancel coroutine knockback yang sedang jalan
     private Coroutine knockbackCoroutine;
 
     void Start()
@@ -33,51 +40,56 @@ public class EnemyHealth : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
         slimeAI = GetComponent<SlimeAI>();
+
+        if (healthBar != null)
+            healthBar.SetHealth(currentHealth, maxHealth);
     }
 
-    public void TakeDamage(int damage, Vector2 hitDirection)
+    public void TakeDamage(int damage, Vector2 hitDirection, bool isCrit = false)
     {
         if (isDead) return;
 
         currentHealth -= damage;
 
+        if (healthBar != null)
+            healthBar.SetHealth(Mathf.Max(currentHealth, 0), maxHealth);
+
+        if (DamageNumberSpawner.Instance != null)
+            DamageNumberSpawner.Instance.Spawn(transform.position + Vector3.up * 0.5f, damage, isCrit);
+
+        if (CameraImpulseManager.Instance != null)
+            CameraImpulseManager.Instance.Shake(isCrit ? critShakeMultiplier : shakeMultiplier);
+
         if (currentHealth <= 0)
         {
             isDead = true;
 
-            // Cancel knockback yang mungkin masih jalan
             if (knockbackCoroutine != null)
                 StopCoroutine(knockbackCoroutine);
-                HitStopManager.Instance.Stop(hitStopDuration); 
-                StartCoroutine(FlashThenDie());
+
+            HitStopManager.Instance.Stop(hitStopDuration);
+            StartCoroutine(FlashThenDie());
             return;
         }
 
-        IEnumerator FlashThenDie()
-        {
-            sr.color = Color.red;
-            yield return new WaitForSecondsRealtime(0.1f);
-            sr.color = Color.white;
-            Die();
-        }
-
-        // Interrupt attack slime jika sedang menyerang
         if (slimeAI != null)
             slimeAI.InterruptAttack();
 
-        // Flash merah
         StartCoroutine(HitFlash());
-
-        // Trigger animasi hit
         animator.SetTrigger("Hit");
-
-        // HitStop
         HitStopManager.Instance.Stop(hitStopDuration);
 
-        // Cancel knockback sebelumnya jika masih jalan, lalu start yang baru
         if (knockbackCoroutine != null)
             StopCoroutine(knockbackCoroutine);
         knockbackCoroutine = StartCoroutine(KnockbackAfterHitStop(hitDirection, hitStopDuration));
+    }
+
+    IEnumerator FlashThenDie()
+    {
+        sr.color = Color.red;
+        yield return new WaitForSecondsRealtime(0.1f);
+        sr.color = Color.white;
+        Die();
     }
 
     IEnumerator HitFlash()
@@ -115,10 +127,18 @@ public class EnemyHealth : MonoBehaviour
             slimeAI.InterruptAttack();
         }
 
-        sr.color = Color.white; // reset warna kalau masih merah
+        sr.color = Color.white;
         rb.linearVelocity = Vector2.zero;
-        animator.ResetTrigger("Hit"); // buang trigger hit yang mungkin pending
+        animator.ResetTrigger("Hit");
         animator.SetTrigger("Die");
+
+        if (countsForQuest && QuestManager.Instance != null)
+            QuestManager.Instance.OnSlimeKilled();
+
+        if (lootPrefab != null && Random.value < lootDropChance)
+        {
+            Instantiate(lootPrefab, transform.position, Quaternion.identity);
+        }
 
         StartCoroutine(DestroyAfterDeath());
     }
